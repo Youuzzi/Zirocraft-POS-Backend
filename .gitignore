@@ -1,0 +1,30 @@
+# --- Java & Build ---
+HELP.md
+target/
+!.**/src/main/**/target/
+!.**/src/test/**/target/
+*.class
+
+# --- Maven ---
+.mvn/wrapper/maven-wrapper.jar
+
+# --- IDE Spesifik (IntelliJ, VS Code, STS) ---
+.idea/
+*.iws
+*.iml
+*.ipr
+.vscode/
+.settings/
+.classpath
+.project
+.factorypath
+.springBeans
+.sts4-cache
+
+# --- OS Spesifik ---
+.DS_Store
+Thumbs.db
+
+# --- RAHASIA DAPUR (JANGAN DI-UPLOAD) ---
+.env
+.env.local
