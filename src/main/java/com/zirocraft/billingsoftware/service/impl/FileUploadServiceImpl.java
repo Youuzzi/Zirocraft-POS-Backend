@@ -47,12 +47,17 @@ public class FileUploadServiceImpl implements FileUploadService {
 
     @Override
     public boolean deleteFile(String imgUrl) {
-        if (imgUrl == null) return false;
+        if (imgUrl == null || imgUrl.isEmpty()) return true; // Anggap sukses kalau gak ada gambar
+
         try {
+            // Kita ambil nama filenya saja, misal dari "/uploads/poto.jpg" jadi "poto.jpg"
             String fileName = imgUrl.replace("/uploads/", "");
             Path filePath = Paths.get(UPLOAD_DIR + fileName);
+
+            // Perintah buat hapus file di Windows kamu
             return Files.deleteIfExists(filePath);
         } catch (IOException e) {
+            System.out.println("Gagal hapus file fisik: " + e.getMessage());
             return false;
         }
     }
