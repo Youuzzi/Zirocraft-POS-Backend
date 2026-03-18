@@ -14,7 +14,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/items")
 @RequiredArgsConstructor
-@CrossOrigin("*") // Biar React nggak kena error CORS
+@CrossOrigin("*")
 public class ItemController {
 
     private final ItemService itemService;

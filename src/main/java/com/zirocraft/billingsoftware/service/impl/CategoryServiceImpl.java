@@ -1,10 +1,10 @@
 package com.zirocraft.billingsoftware.service.impl;
 
-
 import com.zirocraft.billingsoftware.entity.CategoryEntity;
 import com.zirocraft.billingsoftware.io.CategoryRequest;
 import com.zirocraft.billingsoftware.io.CategoryResponse;
 import com.zirocraft.billingsoftware.repository.CategoryRepository;
+import com.zirocraft.billingsoftware.repository.ItemRepository; // Tambahan Baru
 import com.zirocraft.billingsoftware.service.CategoryService;
 import com.zirocraft.billingsoftware.service.FileUploadService;
 import lombok.RequiredArgsConstructor;
@@ -21,10 +21,11 @@ public class CategoryServiceImpl implements CategoryService {
 
     private final CategoryRepository categoryRepository;
     private final FileUploadService fileUploadService;
+    private final ItemRepository itemRepository; // 1. Tambahkan ini agar bisa akses data barang
 
     @Override
     public CategoryResponse add(CategoryRequest request, MultipartFile file) {
-       String imgUrl = fileUploadService.uploadFile(file);
+        String imgUrl = fileUploadService.uploadFile(file);
         CategoryEntity newCategory = convertToEntity(request);
         newCategory.setImgUrl(imgUrl);
         newCategory = categoryRepository.save(newCategory);
@@ -41,14 +42,17 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     public void delete(String categoryId) {
-       CategoryEntity existingCategory = categoryRepository.findByCategoryId(categoryId)
+        CategoryEntity existingCategory = categoryRepository.findByCategoryId(categoryId)
                 .orElseThrow(() -> new RuntimeException("Category not found:" +categoryId));
-       fileUploadService.deleteFile(existingCategory.getImgUrl());
+        fileUploadService.deleteFile(existingCategory.getImgUrl());
         categoryRepository.delete(existingCategory);
     }
 
     private CategoryResponse convertToResponse(CategoryEntity newCategory) {
-       return CategoryResponse.builder()
+        // 2. Logika Hitung Barang: Tanya ke ItemRepository ada berapa barang di ID kategori ini
+        Integer itemsCount = itemRepository.countByCategoryId(newCategory.getId());
+
+        return CategoryResponse.builder()
                 .categoryId(newCategory.getCategoryId())
                 .name(newCategory.getName())
                 .description(newCategory.getDescription())
@@ -56,12 +60,12 @@ public class CategoryServiceImpl implements CategoryService {
                 .imgUrl(newCategory.getImgUrl())
                 .createdAt(newCategory.getCreatedAt())
                 .updatedAt(newCategory.getUpdatedAt())
+                .items(itemsCount) // 3. Masukkan hasil hitungan ke Response
                 .build();
-
     }
 
     private CategoryEntity convertToEntity(CategoryRequest request) {
-       return CategoryEntity.builder()
+        return CategoryEntity.builder()
                 .categoryId(UUID.randomUUID().toString())
                 .name(request.getName())
                 .description(request.getDescription())
