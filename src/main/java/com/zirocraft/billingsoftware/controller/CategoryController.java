@@ -16,7 +16,6 @@ import java.util.List;
 @RestController
 @RequestMapping("/categories")
 @RequiredArgsConstructor
-@CrossOrigin("*")
 public class CategoryController {
 
     private final CategoryService categoryService;
@@ -42,7 +41,7 @@ public class CategoryController {
     }
 
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @DeleteMapping("/{categoryId}") // Perbaikan: Typo 'categoriId' jadi 'categoryId'
+    @DeleteMapping("/{categoryId}")
     public void remove(@PathVariable String categoryId) {
         try {
             categoryService.delete(categoryId);
