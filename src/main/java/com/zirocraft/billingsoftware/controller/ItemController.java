@@ -12,7 +12,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/items")
+@RequestMapping("/api/v1.0/items")
 @RequiredArgsConstructor
 @CrossOrigin("*")
 public class ItemController {

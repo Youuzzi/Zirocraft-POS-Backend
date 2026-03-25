@@ -17,7 +17,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-public class itemServiceImpl implements ItemService {
+public class ItemServiceImpl implements ItemService {
 
     private final FileUploadService fileUploadService;
     private final CategoryRepository categoryRepository;
@@ -28,13 +28,11 @@ public class itemServiceImpl implements ItemService {
         String imgUrl = fileUploadService.uploadFile(file);
         ItemEntity newItem = convertToEntity(request);
 
-
         CategoryEntity existingCategory = categoryRepository.findByCategoryId(request.getCategoryId())
                 .orElseThrow(() -> new RuntimeException("Category not found: " + request.getCategoryId()));
 
         newItem.setCategory(existingCategory);
         newItem.setImgUrl(imgUrl);
-
 
         ItemEntity savedItem = itemRepository.save(newItem);
         return convertToResponse(savedItem);
@@ -42,7 +40,6 @@ public class itemServiceImpl implements ItemService {
 
     @Override
     public List<ItemResponse> fetchItems() {
-        // Jangan List.of() lagi, ambil data beneran
         return itemRepository.findAll().stream()
                 .map(this::convertToResponse)
                 .collect(Collectors.toList());
@@ -55,7 +52,6 @@ public class itemServiceImpl implements ItemService {
         fileUploadService.deleteFile(item.getImgUrl());
         itemRepository.delete(item);
     }
-
 
     private ItemEntity convertToEntity(ItemRequest request) {
         return ItemEntity.builder()

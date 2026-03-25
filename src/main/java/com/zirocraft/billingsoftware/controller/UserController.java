@@ -1,6 +1,5 @@
 package com.zirocraft.billingsoftware.controller;
 
-
 import com.zirocraft.billingsoftware.io.UserRequest;
 import com.zirocraft.billingsoftware.io.UserResponse;
 import com.zirocraft.billingsoftware.service.UserService;
@@ -13,16 +12,16 @@ import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/admin")
+@RequestMapping("/api/v1.0/admin") // DIPERBAIKI: URL disamakan dengan standar Postman
 public class UserController {
 
     private final UserService userService;
 
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
-    public UserResponse resgisterUser(@RequestBody UserRequest request){
+    public UserResponse registerUser(@RequestBody UserRequest request){ // DIPERBAIKI: typo 'resgister'
         try {
-           return userService.createUser(request);
+            return userService.createUser(request);
         } catch (Exception e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unable to create user "+e.getMessage());
         }
@@ -30,7 +29,7 @@ public class UserController {
 
     @GetMapping("/users")
     public List<UserResponse> readUsers(){
-       return userService.readUsers();
+        return userService.readUsers();
     }
 
     @DeleteMapping("/users/{id}")
