@@ -39,9 +39,9 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
                         // DIPERBAIKI: URL disesuaikan dengan Postman
-                        .requestMatchers("/api/v1.0/login", "/api/v1.0/encode").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/v1.0/category/**", "/api/v1.0/items/**").hasAnyRole("USER", "ADMIN")
-                        .requestMatchers("/api/v1.0/category/**", "/api/v1.0/items/**").hasRole("ADMIN")
+                        .requestMatchers("/api/v1.0/login", "/api/v1.0/encode", "/uploads/**", "/api/v1.0/uploads/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1.0/categories/**", "/api/v1.0/items/**").hasAnyRole("USER", "ADMIN")
+                        .requestMatchers("/api/v1.0/admin/categories/**", "/api/v1.0/admin/items/**").hasRole("ADMIN")
                         .requestMatchers("/api/v1.0/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
