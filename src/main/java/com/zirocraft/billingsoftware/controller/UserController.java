@@ -12,33 +12,36 @@ import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/v1.0/admin") // DIPERBAIKI: URL disamakan dengan standar Postman
+@RequestMapping("/admin/users")
 public class UserController {
 
     private final UserService userService;
 
+    // 1. REGISTER: POST ke /api/v1.0/admin/users/register
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
-    public UserResponse registerUser(@RequestBody UserRequest request){ // DIPERBAIKI: typo 'resgister'
+    public UserResponse registerUser(@RequestBody UserRequest request) {
         try {
             return userService.createUser(request);
         } catch (Exception e) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unable to create user "+e.getMessage());
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Gagal buat user: " + e.getMessage());
         }
     }
 
-    @GetMapping("/users")
-    public List<UserResponse> readUsers(){
+    // 2. READ ALL: GET ke /api/v1.0/admin/users
+    @GetMapping
+    public List<UserResponse> readUsers() {
         return userService.readUsers();
     }
 
-    @DeleteMapping("/users/{id}")
+    // 3. DELETE: DELETE ke /api/v1.0/admin/users/{id}
+    @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deleteUser(@PathVariable String id){
+    public void deleteUser(@PathVariable String id) {
         try {
             userService.deleteUser(id);
         } catch (Exception e) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found");
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User ID " + id + " tidak ditemukan");
         }
     }
 }

@@ -62,12 +62,18 @@ public class ItemServiceImpl implements ItemService {
     }
 
     private ItemResponse convertToResponse(ItemEntity entity) {
+        // 1. Tentukan Alamat Server Lu (Sesuai yang jalan di Postman)
+        String baseUrl = "http://localhost:8080/api/v1.0";
+
+        // 2. Gabungkan alamat server dengan path gambar dari database
+        String fullImgUrl = (entity.getImgUrl() != null) ? baseUrl + entity.getImgUrl() : null;
+
         return ItemResponse.builder()
                 .itemId(entity.getItemId())
                 .name(entity.getName())
                 .price(entity.getPrice())
                 .description(entity.getDescription())
-                .imgUrl(entity.getImgUrl())
+                .imgUrl(fullImgUrl) // <--- SEKARANG KIRIM URL LENGKAP KE POSTMAN
                 .categoryId(entity.getCategory().getCategoryId())
                 .categoryName(entity.getCategory().getName())
                 .createdAt(entity.getCreatedAt())
