@@ -12,27 +12,20 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
-
-import java.util.Map;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/v1.0") // DIPERBAIKI: Tambah ini biar URL Postman jalan
+// HAPUS @RequestMapping("/api/v1.0") di sini!
 public class AuthController {
 
-    private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final AppUserDetailService appUserDetailService;
     private final UserService userService;
     private final JwtUtil jwtUtil;
 
-    @PostMapping("/login")
+    @PostMapping("/login") // URL Final: http://localhost:8080/api/v1.0/login
     public AuthResponse login(@RequestBody AuthRequest request) throws Exception {
         authenticate(request.getEmail(), request.getPassword());
         final UserDetails userDetails = appUserDetailService.loadUserByUsername(request.getEmail());
@@ -44,15 +37,8 @@ public class AuthController {
     private void authenticate(String email, String password) throws Exception {
         try {
             authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(email, password));
-        }catch (DisabledException e) {
-            throw new Exception("User disabled");
-        }catch (BadCredentialsException e) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email or password is incorrect");
+        } catch (BadCredentialsException e) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Email atau password salah, Zi!");
         }
-    }
-
-    @PostMapping("/encode")
-    public String encodePassword(@RequestBody Map<String, String> request) {
-        return passwordEncoder.encode(request.get("password"));
     }
 }

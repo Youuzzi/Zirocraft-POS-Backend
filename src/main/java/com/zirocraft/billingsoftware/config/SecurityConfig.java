@@ -34,18 +34,25 @@ public class SecurityConfig {
     private final JwtRequestFilter jwtRequestFilter;
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception{
-        http.cors(Customizer.withDefaults())
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        http
+                .cors(Customizer.withDefaults())
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
-                        // DIPERBAIKI: URL disesuaikan dengan Postman
-                        .requestMatchers("/api/v1.0/login", "/api/v1.0/encode", "/uploads/**", "/api/v1.0/uploads/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/v1.0/categories/**", "/api/v1.0/items/**").hasAnyRole("USER", "ADMIN")
-                        .requestMatchers("/api/v1.0/admin/categories/**", "/api/v1.0/admin/items/**").hasRole("ADMIN")
-                        .requestMatchers("/api/v1.0/admin/**").hasRole("ADMIN")
+                        // Jalur publik (Tanpa Token)
+                        .requestMatchers("/login", "/encode", "/uploads/**").permitAll()
+
+                        // Jalur ambil data kategori & item (Kita bikin publik biar Kasir/User bisa liat)
+                        .requestMatchers(HttpMethod.GET, "/categories", "/categories/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/admin/items", "/admin/items/**").permitAll()
+
+                        // Jalur modifikasi data (Wajib ADMIN)
+                        .requestMatchers("/admin/**").hasRole("ADMIN")
+
                         .anyRequest().authenticated())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class);
+
         return http.build();
     }
 
