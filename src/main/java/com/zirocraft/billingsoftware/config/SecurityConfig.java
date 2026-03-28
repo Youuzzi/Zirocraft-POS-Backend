@@ -5,7 +5,7 @@ import com.zirocraft.billingsoftware.service.impl.AppUserDetailService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpMethod; // IMPORT INI
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -21,7 +21,6 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import org.springframework.web.filter.CorsFilter;
 
 import java.util.List;
 
@@ -38,16 +37,23 @@ public class SecurityConfig {
         http
                 .cors(Customizer.withDefaults())
                 .csrf(AbstractHttpConfigurer::disable)
+                .headers(headers -> headers
+                        .contentSecurityPolicy(csp -> csp
+                                .policyDirectives("default-src 'self'; " +
+                                        "script-src 'self' 'unsafe-inline'; " +
+                                        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
+                                        "img-src 'self' data: http://localhost:8080; " +
+                                        "font-src 'self' https://fonts.gstatic.com;")))
                 .authorizeHttpRequests(auth -> auth
-                        // Jalur publik (Tanpa Token)
+                        // 1. Jalur Publik
                         .requestMatchers("/login", "/encode", "/uploads/**").permitAll()
 
-                        // Jalur ambil data kategori & item (Kita bikin publik biar Kasir/User bisa liat)
-                        .requestMatchers(HttpMethod.GET, "/categories", "/categories/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/admin/items", "/admin/items/**").permitAll()
+                        // 2. Izinkan GET (Baca Data) secara publik agar 403 hilang saat fetch awal
+                        .requestMatchers(HttpMethod.GET, "/categories/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/admin/items/**").permitAll()
 
-                        // Jalur modifikasi data (Wajib ADMIN)
-                        .requestMatchers("/admin/**").hasRole("ADMIN")
+                        // 3. Jalur ADMIN (Tambah/Hapus/Update)
+                        .requestMatchers("/admin/**").hasAuthority("ROLE_ADMIN")
 
                         .anyRequest().authenticated())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -58,15 +64,11 @@ public class SecurityConfig {
 
     @Bean
     public PasswordEncoder passwordEncoder(){
-        return  new BCryptPasswordEncoder();
+        return new BCryptPasswordEncoder();
     }
 
     @Bean
-    public CorsFilter corsFilter() {
-        return new CorsFilter(corsConfigurationSource());
-    }
-
-    private UrlBasedCorsConfigurationSource corsConfigurationSource() {
+    public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowedOrigins(List.of("http://localhost:5173"));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));

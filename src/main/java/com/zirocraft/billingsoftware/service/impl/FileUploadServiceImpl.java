@@ -11,53 +11,58 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.Arrays;
+import java.util.List;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class FileUploadServiceImpl implements FileUploadService {
 
-    // Fotonya nanti masuk ke folder "uploads" di dalam projectmu
-    // Ganti baris UPLOAD_DIR yang lama dengan ini:
     private final String UPLOAD_DIR = "C:/Users/HP/Documents/SpringBootPOS/backend/billingsoftware/src/main/resources/static/uploads/";
+
+    // DAFTAR EKSTENSI YANG DIIZINKAN (Whitelist)
+    private static final List<String> ALLOWED_EXTENSIONS = Arrays.asList("image/jpeg", "image/png", "image/jpg", "image/webp");
 
     @Override
     public String uploadFile(MultipartFile file) {
+        // 1. VALIDASI: Cek apakah file kosong
+        if (file.isEmpty()) {
+            throw new RuntimeException("Gagal upload: File kosong, Zi!");
+        }
+
+        // 2. VALIDASI KEAMANAN: Cek MIME Type (Mencegah file .exe, .php, .html masuk)
+        String contentType = file.getContentType();
+        if (contentType == null || !ALLOWED_EXTENSIONS.contains(contentType.toLowerCase())) {
+            throw new RuntimeException("ILEGAL FILE! Hanya boleh upload gambar (JPG/PNG/WEBP) untuk mencegah penyusupan!");
+        }
+
         try {
-            // 1. Cek folder, kalau belum ada kita buatkan otomatis
             File directory = new File(UPLOAD_DIR);
             if (!directory.exists()) {
                 directory.mkdirs();
             }
 
-            // 2. Kasih nama unik biar gak bentrok (pake UUID)
+            // 3. Nama file unik dengan UUID
             String fileName = UUID.randomUUID().toString() + "_" + file.getOriginalFilename();
-
-            // 3. Simpan file ke harddisk laptop
             Path filePath = Paths.get(UPLOAD_DIR + fileName);
             Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
 
-            // 4. Balikin alamat file-nya biar bisa disimpan di database
             return "/uploads/" + fileName;
 
         } catch (IOException e) {
-            throw new RuntimeException("Gagal upload gambar: " + e.getMessage());
+            throw new RuntimeException("Gagal simpan file: " + e.getMessage());
         }
     }
 
     @Override
     public boolean deleteFile(String imgUrl) {
-        if (imgUrl == null || imgUrl.isEmpty()) return true; // Anggap sukses kalau gak ada gambar
-
+        if (imgUrl == null || imgUrl.isEmpty()) return true;
         try {
-            // Kita ambil nama filenya saja, misal dari "/uploads/poto.jpg" jadi "poto.jpg"
             String fileName = imgUrl.replace("/uploads/", "");
             Path filePath = Paths.get(UPLOAD_DIR + fileName);
-
-            // Perintah buat hapus file di Windows kamu
             return Files.deleteIfExists(filePath);
         } catch (IOException e) {
-            System.out.println("Gagal hapus file fisik: " + e.getMessage());
             return false;
         }
     }

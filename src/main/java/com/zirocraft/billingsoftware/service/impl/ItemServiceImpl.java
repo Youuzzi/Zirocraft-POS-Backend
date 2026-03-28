@@ -8,6 +8,7 @@ import com.zirocraft.billingsoftware.repository.CategoryRepository;
 import com.zirocraft.billingsoftware.repository.ItemRepository;
 import com.zirocraft.billingsoftware.service.FileUploadService;
 import com.zirocraft.billingsoftware.service.ItemService;
+import com.zirocraft.billingsoftware.util.SanitizerUtil; // IMPORT INI
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -22,17 +23,26 @@ public class ItemServiceImpl implements ItemService {
     private final FileUploadService fileUploadService;
     private final CategoryRepository categoryRepository;
     private final ItemRepository itemRepository;
+    private final SanitizerUtil sanitizer; // 1. INJECT SANITIZER
 
     @Override
     public ItemResponse add(ItemRequest request, MultipartFile file) {
         String imgUrl = fileUploadService.uploadFile(file);
-        ItemEntity newItem = convertToEntity(request);
+
+        // 2. CUCI INPUT PRODUK
+        String cleanName = sanitizer.cleanTextOnly(request.getName());
+        String cleanDesc = sanitizer.cleanTextOnly(request.getDescription());
 
         CategoryEntity existingCategory = categoryRepository.findByCategoryId(request.getCategoryId())
                 .orElseThrow(() -> new RuntimeException("Category not found: " + request.getCategoryId()));
 
-        newItem.setCategory(existingCategory);
-        newItem.setImgUrl(imgUrl);
+        ItemEntity newItem = ItemEntity.builder()
+                .name(cleanName) // Pake yang bersih
+                .price(request.getPrice())
+                .description(cleanDesc) // Pake yang bersih
+                .category(existingCategory)
+                .imgUrl(imgUrl)
+                .build();
 
         ItemEntity savedItem = itemRepository.save(newItem);
         return convertToResponse(savedItem);
@@ -53,19 +63,8 @@ public class ItemServiceImpl implements ItemService {
         itemRepository.delete(item);
     }
 
-    private ItemEntity convertToEntity(ItemRequest request) {
-        return ItemEntity.builder()
-                .name(request.getName())
-                .price(request.getPrice())
-                .description(request.getDescription())
-                .build();
-    }
-
     private ItemResponse convertToResponse(ItemEntity entity) {
-        // 1. Tentukan Alamat Server Lu (Sesuai yang jalan di Postman)
         String baseUrl = "http://localhost:8080/api/v1.0";
-
-        // 2. Gabungkan alamat server dengan path gambar dari database
         String fullImgUrl = (entity.getImgUrl() != null) ? baseUrl + entity.getImgUrl() : null;
 
         return ItemResponse.builder()
@@ -73,7 +72,7 @@ public class ItemServiceImpl implements ItemService {
                 .name(entity.getName())
                 .price(entity.getPrice())
                 .description(entity.getDescription())
-                .imgUrl(fullImgUrl) // <--- SEKARANG KIRIM URL LENGKAP KE POSTMAN
+                .imgUrl(fullImgUrl)
                 .categoryId(entity.getCategory().getCategoryId())
                 .categoryName(entity.getCategory().getName())
                 .createdAt(entity.getCreatedAt())

@@ -4,9 +4,10 @@ import com.zirocraft.billingsoftware.entity.CategoryEntity;
 import com.zirocraft.billingsoftware.io.CategoryRequest;
 import com.zirocraft.billingsoftware.io.CategoryResponse;
 import com.zirocraft.billingsoftware.repository.CategoryRepository;
-import com.zirocraft.billingsoftware.repository.ItemRepository; // Tambahan Baru
+import com.zirocraft.billingsoftware.repository.ItemRepository;
 import com.zirocraft.billingsoftware.service.CategoryService;
 import com.zirocraft.billingsoftware.service.FileUploadService;
+import com.zirocraft.billingsoftware.util.SanitizerUtil; // IMPORT INI
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -21,13 +22,25 @@ public class CategoryServiceImpl implements CategoryService {
 
     private final CategoryRepository categoryRepository;
     private final FileUploadService fileUploadService;
-    private final ItemRepository itemRepository; // 1. Tambahkan ini agar bisa akses data barang
+    private final ItemRepository itemRepository;
+    private final SanitizerUtil sanitizer; // 1. INJECT SANITIZER
 
     @Override
     public CategoryResponse add(CategoryRequest request, MultipartFile file) {
         String imgUrl = fileUploadService.uploadFile(file);
-        CategoryEntity newCategory = convertToEntity(request);
-        newCategory.setImgUrl(imgUrl);
+
+        // 2. CUCI INPUT DISINI
+        String cleanName = sanitizer.cleanTextOnly(request.getName());
+        String cleanDesc = sanitizer.cleanTextOnly(request.getDescription());
+
+        CategoryEntity newCategory = CategoryEntity.builder()
+                .categoryId(UUID.randomUUID().toString())
+                .name(cleanName) // Pake yang bersih
+                .description(cleanDesc) // Pake yang bersih
+                .bgColor(request.getBgColor())
+                .imgUrl(imgUrl)
+                .build();
+
         newCategory = categoryRepository.save(newCategory);
         return convertToResponse(newCategory);
     }
@@ -36,20 +49,19 @@ public class CategoryServiceImpl implements CategoryService {
     public List<CategoryResponse> read() {
         return categoryRepository.findAll()
                 .stream()
-                .map(categoryEntity -> convertToResponse(categoryEntity))
+                .map(this::convertToResponse)
                 .collect(Collectors.toList());
     }
 
     @Override
     public void delete(String categoryId) {
         CategoryEntity existingCategory = categoryRepository.findByCategoryId(categoryId)
-                .orElseThrow(() -> new RuntimeException("Category not found:" +categoryId));
+                .orElseThrow(() -> new RuntimeException("Category not found:" + categoryId));
         fileUploadService.deleteFile(existingCategory.getImgUrl());
         categoryRepository.delete(existingCategory);
     }
 
     private CategoryResponse convertToResponse(CategoryEntity newCategory) {
-        // 2. Logika Hitung Barang: Tanya ke ItemRepository ada berapa barang di ID kategori ini
         Integer itemsCount = itemRepository.countByCategoryId(newCategory.getId());
 
         return CategoryResponse.builder()
@@ -60,16 +72,7 @@ public class CategoryServiceImpl implements CategoryService {
                 .imgUrl(newCategory.getImgUrl())
                 .createdAt(newCategory.getCreatedAt())
                 .updatedAt(newCategory.getUpdatedAt())
-                .items(itemsCount) // 3. Masukkan hasil hitungan ke Response
-                .build();
-    }
-
-    private CategoryEntity convertToEntity(CategoryRequest request) {
-        return CategoryEntity.builder()
-                .categoryId(UUID.randomUUID().toString())
-                .name(request.getName())
-                .description(request.getDescription())
-                .bgColor(request.getBgColor())
+                .items(itemsCount)
                 .build();
     }
 }
