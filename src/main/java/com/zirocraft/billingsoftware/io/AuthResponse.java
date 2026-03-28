@@ -1,13 +1,15 @@
 package com.zirocraft.billingsoftware.io;
 
+import lombok.*;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-
+@Builder
 @Getter
+@Setter
 @AllArgsConstructor
+@NoArgsConstructor
 public class AuthResponse {
     private String email;
     private String token;
     private String role;
+    private String name;
 }
