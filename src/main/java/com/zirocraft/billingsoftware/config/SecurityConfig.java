@@ -38,23 +38,19 @@ public class SecurityConfig {
                 .cors(Customizer.withDefaults())
                 .csrf(AbstractHttpConfigurer::disable)
                 .headers(headers -> headers
-                        // --- SIGNATURE SAKTI ZIROCRAFT STUDIO ---
                         .addHeaderWriter((request, response) -> {
                             response.setHeader("X-Powered-By", "Zirocraft-Studio-ID");
-                            response.setHeader("X-Author-Email", "zirocraftid@gmail.com");
-                            response.setHeader("X-Software-Status", "v1.0-STABLE");
                         })
-                        .contentSecurityPolicy(csp -> csp
-                                .policyDirectives("default-src 'self'; " +
-                                        "script-src 'self' 'unsafe-inline'; " +
-                                        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
-                                        "img-src 'self' data: http://localhost:8080; " +
-                                        "font-src 'self' https://fonts.gstatic.com;")))
+                        .contentSecurityPolicy(csp -> csp.policyDirectives("default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: http://localhost:8080; font-src 'self' https://fonts.gstatic.com;")))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/login", "/encode", "/uploads/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/categories/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/admin/items/**").permitAll()
-                        .requestMatchers("/admin/**").hasAuthority("ROLE_ADMIN")
+
+                        // IZINKAN SEMUA USER (ADMIN & USER) UNTUK LIHAT KATEGORI & ITEMS
+                        .requestMatchers(HttpMethod.GET, "/categories/**", "/items/**").hasAnyRole("ADMIN", "USER")
+
+                        // SISANYA (POST, PUT, DELETE) WAJIB ADMIN
+                        .requestMatchers("/admin/**").hasRole("ADMIN")
+
                         .anyRequest().authenticated())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class);

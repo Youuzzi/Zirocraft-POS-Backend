@@ -12,12 +12,10 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 public class SettingEntity {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.IDENTITY) // Database yang ngatur ID
     private Long id;
 
     private String storeName;
-
     private BigDecimal defaultFloatAmount;
-
-    private String currencySymbol; // "Rp"
+    private String currencySymbol;
 }
