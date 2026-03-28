@@ -5,7 +5,7 @@ import com.zirocraft.billingsoftware.service.impl.AppUserDetailService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpMethod; // IMPORT INI
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -22,7 +22,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-import java.util.List;
+import java.util.Arrays;
 
 @Configuration
 @EnableWebSecurity
@@ -38,6 +38,12 @@ public class SecurityConfig {
                 .cors(Customizer.withDefaults())
                 .csrf(AbstractHttpConfigurer::disable)
                 .headers(headers -> headers
+                        // --- SIGNATURE SAKTI ZIROCRAFT STUDIO ---
+                        .addHeaderWriter((request, response) -> {
+                            response.setHeader("X-Powered-By", "Zirocraft-Studio-ID");
+                            response.setHeader("X-Author-Email", "zirocraftid@gmail.com");
+                            response.setHeader("X-Software-Status", "v1.0-STABLE");
+                        })
                         .contentSecurityPolicy(csp -> csp
                                 .policyDirectives("default-src 'self'; " +
                                         "script-src 'self' 'unsafe-inline'; " +
@@ -45,16 +51,10 @@ public class SecurityConfig {
                                         "img-src 'self' data: http://localhost:8080; " +
                                         "font-src 'self' https://fonts.gstatic.com;")))
                 .authorizeHttpRequests(auth -> auth
-                        // 1. Jalur Publik
                         .requestMatchers("/login", "/encode", "/uploads/**").permitAll()
-
-                        // 2. Izinkan GET (Baca Data) secara publik agar 403 hilang saat fetch awal
                         .requestMatchers(HttpMethod.GET, "/categories/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/admin/items/**").permitAll()
-
-                        // 3. Jalur ADMIN (Tambah/Hapus/Update)
                         .requestMatchers("/admin/**").hasAuthority("ROLE_ADMIN")
-
                         .anyRequest().authenticated())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class);
@@ -70,11 +70,10 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of("http://localhost:5173"));
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
-        config.setAllowedHeaders(List.of("Authorization", "Content-Type"));
+        config.setAllowedOrigins(Arrays.asList("http://localhost:5173"));
+        config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
+        config.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "Accept"));
         config.setAllowCredentials(true);
-
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
         return source;
