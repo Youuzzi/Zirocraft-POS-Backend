@@ -23,6 +23,7 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.Arrays;
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -38,19 +39,35 @@ public class SecurityConfig {
                 .cors(Customizer.withDefaults())
                 .csrf(AbstractHttpConfigurer::disable)
                 .headers(headers -> headers
+                        // --- SIGNATURE SAKTI ZIROCRAFT STUDIO ---
                         .addHeaderWriter((request, response) -> {
                             response.setHeader("X-Powered-By", "Zirocraft-Studio-ID");
+                            response.setHeader("X-Engine-Author", "zirocraftid@gmail.com");
                         })
-                        .contentSecurityPolicy(csp -> csp.policyDirectives("default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: http://localhost:8080; font-src 'self' https://fonts.gstatic.com;")))
+                        // CONTENT SECURITY POLICY (Mencegah Injeksi Script/Judol)
+                        .contentSecurityPolicy(csp -> csp
+                                .policyDirectives("default-src 'self'; " +
+                                        "script-src 'self' 'unsafe-inline'; " +
+                                        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
+                                        "img-src 'self' data: http://localhost:8080; " +
+                                        "font-src 'self' https://fonts.gstatic.com;")))
                 .authorizeHttpRequests(auth -> auth
+                        // 1. Jalur Publik (Tanpa Login)
                         .requestMatchers("/login", "/encode", "/uploads/**").permitAll()
 
-                        // IZINKAN SEMUA USER (ADMIN & USER) UNTUK LIHAT KATEGORI & ITEMS
+                        // 2. Jalur Akses Data Dasar (Bisa Admin & Kasir/User)
+                        // GET categories, items, dan settings diizinkan agar Kasir bisa fetch menu & modal awal
                         .requestMatchers(HttpMethod.GET, "/categories/**", "/items/**").hasAnyRole("ADMIN", "USER")
+                        .requestMatchers(HttpMethod.GET, "/admin/settings/**").hasAnyRole("ADMIN", "USER")
 
-                        // SISANYA (POST, PUT, DELETE) WAJIB ADMIN
+                        // 3. Jalur Sesi Shift (Admin & Kasir harus bisa buka/tutup shift)
+                        .requestMatchers("/shifts/**").hasAnyRole("ADMIN", "USER")
+
+                        // 4. Jalur Management (Hanya Admin)
+                        // Segala sesuatu di bawah /admin/ (kecuali GET settings tadi) wajib ADMIN
                         .requestMatchers("/admin/**").hasRole("ADMIN")
 
+                        // 5. Selebihnya wajib ter-autentikasi
                         .anyRequest().authenticated())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class);
@@ -66,10 +83,12 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(Arrays.asList("http://localhost:5173"));
+        // Izinkan Frontend React lo
+        config.setAllowedOrigins(List.of("http://localhost:5173"));
         config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
-        config.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "Accept"));
+        config.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "Accept", "X-Requested-With"));
         config.setAllowCredentials(true);
+
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
         return source;
