@@ -7,63 +7,63 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class OrderServiceImpl {
-
     private final OrderRepository orderRepository;
     private final ShiftRepository shiftRepository;
     private final ItemRepository itemRepository;
 
     @Transactional
     public OrderEntity createOrder(OrderRequest request, String email, Long shiftId) {
-        // 1. KEAMANAN: Verifikasi Sesi
+        // 1. Verifikasi Shift & Kepemilikan
         ShiftEntity shift = shiftRepository.findById(shiftId)
-                .orElseThrow(() -> new RuntimeException("Shift tidak ditemukan!"));
+                .orElseThrow(() -> new RuntimeException("Sesi Shift tidak ditemukan!"));
 
-        if (!shift.getStatus().equals("OPEN") || !shift.getUserId().equals(email)) {
-            throw new RuntimeException("ILEGAL: Sesi tidak valid atau sudah ditutup!");
+        if (!"OPEN".equals(shift.getStatus()) || !shift.getUserId().equals(email)) {
+            throw new RuntimeException("AKSES ILEGAL: Sesi tidak valid!");
         }
 
-        // 2. LOGIKA: Hitung Ulang & Validasi Barang
-        BigDecimal serverTotal = BigDecimal.ZERO;
+        // 2. Anti-Hack: Ambil harga asli dari DB
+        Map<String, ItemEntity> dbItems = itemRepository.findAll().stream()
+                .collect(Collectors.toMap(ItemEntity::getName, Function.identity()));
+
+        BigDecimal totalServer = BigDecimal.ZERO;
         List<OrderItemEntity> orderItems = new ArrayList<>();
 
         OrderEntity order = OrderEntity.builder()
                 .orderNumber("ZIRO-" + System.currentTimeMillis())
                 .tableNumber(request.getTableNumber())
                 .paymentType(request.getPaymentType())
-                .userId(email)
-                .shiftId(shiftId)
-                .status("PENDING") // Status awal nota
-                .build();
+                .userId(email).shiftId(shiftId).status("PENDING").build();
 
         for (OrderRequest.CartItem item : request.getItems()) {
-            ItemEntity dbItem = itemRepository.findAll().stream()
-                    .filter(i -> i.getName().equals(item.getName()))
-                    .findFirst()
-                    .orElseThrow(() -> new RuntimeException("Item " + item.getName() + " tidak terdaftar!"));
+            ItemEntity dbItem = dbItems.get(item.getName());
+            if (dbItem == null) throw new RuntimeException("Barang " + item.getName() + " ilegal!");
 
-            BigDecimal subTotal = dbItem.getPrice().multiply(new BigDecimal(item.getQty()));
-            serverTotal = serverTotal.add(subTotal);
+            // Cek Stok
+            if (dbItem.getStock() < item.getQty()) throw new RuntimeException("Stok " + item.getName() + " habis!");
 
-            orderItems.add(OrderItemEntity.builder()
-                    .itemName(dbItem.getName())
-                    .price(dbItem.getPrice())
-                    .quantity(item.getQty())
-                    .subTotal(subTotal)
-                    .order(order)
-                    .build());
+            // Potong Stok
+            dbItem.setStock(dbItem.getStock() - item.getQty());
+            itemRepository.save(dbItem);
+
+            BigDecimal sub = dbItem.getPrice().multiply(new BigDecimal(item.getQty()));
+            totalServer = totalServer.add(sub);
+            orderItems.add(OrderItemEntity.builder().itemName(dbItem.getName()).price(dbItem.getPrice())
+                    .quantity(item.getQty()).subTotal(sub).order(order).build());
         }
 
-        order.setTotalAmount(serverTotal);
+        order.setTotalAmount(totalServer);
         order.setItems(orderItems);
 
-        // 3. UPDATE: Saldo Laci
-        shift.setTotalSales(shift.getTotalSales().add(serverTotal));
+        // Update Saldo Shift
+        BigDecimal currentSales = shift.getTotalSales() != null ? shift.getTotalSales() : BigDecimal.ZERO;
+        shift.setTotalSales(currentSales.add(totalServer));
         shiftRepository.save(shift);
 
         return orderRepository.save(order);

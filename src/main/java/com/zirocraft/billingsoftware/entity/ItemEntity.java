@@ -32,6 +32,10 @@ public class ItemEntity {
 
     private String description;
 
+    // --- TAMBAHAN: FIELD STOK ---
+    @Column(nullable = false)
+    private Integer stock;
+
     @CreationTimestamp
     @Column(updatable = false)
     private Timestamp createdAt;
@@ -41,17 +45,19 @@ public class ItemEntity {
 
     private String imgUrl;
 
-
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id", nullable = false)
     @OnDelete(action = OnDeleteAction.RESTRICT)
     private CategoryEntity category;
 
-
     @PrePersist
     public void onCreate() {
         if (this.itemId == null) {
             this.itemId = UUID.randomUUID().toString();
+        }
+        // Default stok jadi 0 kalau tidak diinput
+        if (this.stock == null) {
+            this.stock = 0;
         }
     }
 }
