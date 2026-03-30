@@ -23,13 +23,13 @@ public class ItemServiceImpl implements ItemService {
     private final FileUploadService fileUploadService;
     private final CategoryRepository categoryRepository;
     private final ItemRepository itemRepository;
-    private final SanitizerUtil sanitizer; // 1. INJECT SANITIZER
+    private final SanitizerUtil sanitizer;
 
     @Override
     public ItemResponse add(ItemRequest request, MultipartFile file) {
         String imgUrl = fileUploadService.uploadFile(file);
 
-        // 2. CUCI INPUT PRODUK
+
         String cleanName = sanitizer.cleanTextOnly(request.getName());
         String cleanDesc = sanitizer.cleanTextOnly(request.getDescription());
 
@@ -37,9 +37,9 @@ public class ItemServiceImpl implements ItemService {
                 .orElseThrow(() -> new RuntimeException("Category not found: " + request.getCategoryId()));
 
         ItemEntity newItem = ItemEntity.builder()
-                .name(cleanName) // Pake yang bersih
+                .name(cleanName)
                 .price(request.getPrice())
-                .description(cleanDesc) // Pake yang bersih
+                .description(cleanDesc)
                 .category(existingCategory)
                 .imgUrl(imgUrl)
                 .build();
@@ -73,6 +73,7 @@ public class ItemServiceImpl implements ItemService {
                 .price(entity.getPrice())
                 .description(entity.getDescription())
                 .imgUrl(fullImgUrl)
+                .stock(entity.getStock()) // <--- TAMBAHKAN INI
                 .categoryId(entity.getCategory().getCategoryId())
                 .categoryName(entity.getCategory().getName())
                 .createdAt(entity.getCreatedAt())
