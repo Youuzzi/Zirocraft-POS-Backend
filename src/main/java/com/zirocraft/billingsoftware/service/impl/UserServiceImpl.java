@@ -6,10 +6,9 @@ import com.zirocraft.billingsoftware.io.UserResponse;
 import com.zirocraft.billingsoftware.repository.UserRepository;
 import com.zirocraft.billingsoftware.service.UserService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-
+import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -20,53 +19,39 @@ public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+
     @Override
+    @Transactional
     public UserResponse createUser(UserRequest request) {
-        UserEntity newUser = convertToEntity(request);
-        newUser = userRepository.save(newUser);
-        return converToResponse(newUser);
-    }
+        // PROTEKSI: Cek Email
+        if (userRepository.findByEmail(request.getEmail()).isPresent()) {
+            throw new RuntimeException("Email sudah terdaftar!");
+        }
 
-    private UserResponse converToResponse(UserEntity newUser) {
-       return UserResponse.builder()
-                .name(newUser.getName())
-                .email(newUser.getEmail())
-                .userId(newUser.getUserId())
-                .createdAt(newUser.getCreatedAt())
-                .updatedAt(newUser.getUpdatedAt())
-                .role(newUser.getRole())
-                .build();
-    }
-
-    private UserEntity convertToEntity(UserRequest request) {
-       return UserEntity.builder()
+        UserEntity newUser = UserEntity.builder()
                 .userId(UUID.randomUUID().toString())
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
-                .role(request.getRole().toUpperCase())
+                .role("ROLE_" + request.getRole().toUpperCase())
                 .name(request.getName())
+                .build();
+
+        newUser = userRepository.save(newUser);
+        return convertToResponse(newUser);
+    }
+
+    private UserResponse convertToResponse(UserEntity user) {
+        return UserResponse.builder()
+                .userId(user.getUserId())
+                .name(user.getName())
+                .email(user.getEmail())
+                .role(user.getRole())
+                .createdAt(user.getCreatedAt())
+                .updatedAt(user.getUpdatedAt())
                 .build();
     }
 
-    @Override
-    public String getUserRole(String email) {
-       UserEntity existingUser = userRepository.findByEmail(email)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found for the email:"+email));
-       return existingUser.getRole();
-    }
-
-    @Override
-    public List<UserResponse> readUsers() {
-       return userRepository.findAll()
-                .stream()
-                .map(user -> converToResponse(user))
-                .collect(Collectors.toList());
-    }
-
-    @Override
-    public void deleteUser(String id) {
-       UserEntity existingUser = userRepository.findByUserId(id)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
-       userRepository.delete(existingUser);
-    }
+    @Override public String getUserRole(String email) { return userRepository.findByEmail(email).get().getRole(); }
+    @Override public List<UserResponse> readUsers() { return userRepository.findAll().stream().map(this::convertToResponse).collect(Collectors.toList()); }
+    @Override public void deleteUser(String id) { UserEntity user = userRepository.findByUserId(id).get(); userRepository.delete(user); }
 }
