@@ -1,5 +1,6 @@
 package com.zirocraft.billingsoftware.controller;
 
+import com.zirocraft.billingsoftware.entity.ExpenseEntity;
 import com.zirocraft.billingsoftware.entity.ShiftEntity;
 import com.zirocraft.billingsoftware.service.impl.ShiftServiceImpl;
 import lombok.RequiredArgsConstructor;
@@ -26,9 +27,18 @@ public class ShiftController {
         return shiftService.openShift(userId, amount);
     }
 
+    @PostMapping("/expense")
+    public ExpenseEntity addExpense(@RequestBody Map<String, Object> payload) {
+        Long shiftId = Long.valueOf(payload.get("shiftId").toString());
+        String desc = payload.get("description").toString();
+        BigDecimal amount = new BigDecimal(payload.get("amount").toString());
+        String userId = payload.get("userId").toString();
+
+        return shiftService.addExpense(shiftId, desc, amount, userId);
+    }
+
     @PostMapping("/close")
     public ShiftEntity close(@RequestBody Map<String, Object> payload) {
-        // Ambil data dengan lebih aman dari Map
         Long shiftId = Long.valueOf(payload.get("shiftId").toString());
         BigDecimal actualCash = new BigDecimal(payload.get("actualBalance").toString());
         return shiftService.closeShift(shiftId, actualCash);
