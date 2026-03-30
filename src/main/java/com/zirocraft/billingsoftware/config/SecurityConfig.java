@@ -42,23 +42,15 @@ public class SecurityConfig {
                         .addHeaderWriter((request, response) -> {
                             response.setHeader("X-Powered-By", "Zirocraft-Studio-ID");
                         })
+                        .frameOptions(frame -> frame.deny()) // Anti-Clickjacking
                         .contentSecurityPolicy(csp -> csp
                                 .policyDirectives("default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: http://localhost:8080; font-src 'self' https://fonts.gstatic.com;")))
                 .authorizeHttpRequests(auth -> auth
-                        // 1. Jalur Publik
                         .requestMatchers("/login", "/encode", "/uploads/**").permitAll()
-
-                        // 2. Jalur Shift (PENTING: Harus di atas /admin/**)
-                        // Menggunakan hasAnyAuthority karena di DB lo isinya "ROLE_ADMIN" & "ROLE_USER"
                         .requestMatchers("/shifts/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_USER")
-
-                        // 3. Jalur Data Dasar (GET)
                         .requestMatchers(HttpMethod.GET, "/categories/**", "/items/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_USER")
                         .requestMatchers(HttpMethod.GET, "/admin/settings/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_USER")
-
-                        // 4. Jalur Khusus Admin
                         .requestMatchers("/admin/**").hasAuthority("ROLE_ADMIN")
-
                         .anyRequest().authenticated())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class);
@@ -78,6 +70,7 @@ public class SecurityConfig {
         config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         config.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "Accept", "X-Requested-With"));
         config.setAllowCredentials(true);
+        config.setMaxAge(3600L); // Cache preflight selama 1 jam
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
         return source;

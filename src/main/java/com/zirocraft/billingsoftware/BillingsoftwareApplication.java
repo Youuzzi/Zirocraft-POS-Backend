@@ -9,11 +9,8 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 public class BillingsoftwareApplication {
 
 	public static void main(String[] args) {
-		// --- TAMBAHKAN KODE INI ---
-		System.out.println(">>> POSISI KAKI SERVER (User Dir): " + System.getProperty("user.dir"));
-		// --------------------------
-
+		System.out.println(">>> Zirocraft POS Engine: Starting up...");
 		SpringApplication.run(BillingsoftwareApplication.class, args);
+		System.out.println(">>> Zirocraft POS Engine: Ready to use! ✅");
 	}
-
-}	
+}
