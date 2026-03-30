@@ -42,26 +42,31 @@ public class SecurityConfig {
                         .addHeaderWriter((request, response) -> {
                             response.setHeader("X-Powered-By", "Zirocraft-Studio-ID");
                         })
-                        .frameOptions(frame -> frame.deny()) // Anti-Clickjacking
+                        .frameOptions(f -> f.deny())
                         .contentSecurityPolicy(csp -> csp
-                                .policyDirectives("default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: http://localhost:8080; font-src 'self' https://fonts.gstatic.com;")))
+                                .policyDirectives("default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: http://localhost:8080 http://localhost:8080/api/v1.0/uploads/; font-src 'self' https://fonts.gstatic.com;")))
                 .authorizeHttpRequests(auth -> auth
+                        // 1. PUBLIC
                         .requestMatchers("/login", "/encode", "/uploads/**").permitAll()
+
+                        // 2. SHARED ACCESS (ADMIN & USER) - Wajib Authority sesuai isi DB lo
                         .requestMatchers("/shifts/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_USER")
                         .requestMatchers(HttpMethod.GET, "/categories/**", "/items/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_USER")
                         .requestMatchers(HttpMethod.GET, "/admin/settings/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_USER")
+                        .requestMatchers(HttpMethod.POST, "/orders/create").hasAnyAuthority("ROLE_ADMIN", "ROLE_USER")
+
+                        // 3. ADMIN ONLY (WRITE/DELETE)
                         .requestMatchers("/admin/**").hasAuthority("ROLE_ADMIN")
+
                         .anyRequest().authenticated())
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
 
     @Bean
-    public PasswordEncoder passwordEncoder(){
-        return new BCryptPasswordEncoder();
-    }
+    public PasswordEncoder passwordEncoder(){ return new BCryptPasswordEncoder(); }
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
@@ -70,10 +75,7 @@ public class SecurityConfig {
         config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         config.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "Accept", "X-Requested-With"));
         config.setAllowCredentials(true);
-        config.setMaxAge(3600L); // Cache preflight selama 1 jam
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", config);
-        return source;
+        return new UrlBasedCorsConfigurationSource() {{ registerCorsConfiguration("/**", config); }};
     }
 
     @Bean
