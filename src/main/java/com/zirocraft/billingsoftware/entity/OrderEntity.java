@@ -30,6 +30,8 @@ public class OrderEntity {
     @Column(nullable = false)
     private String status;
 
+    private Integer queueNumber;
+
     @CreationTimestamp
     @Column(updatable = false)
     private Timestamp createdAt;
