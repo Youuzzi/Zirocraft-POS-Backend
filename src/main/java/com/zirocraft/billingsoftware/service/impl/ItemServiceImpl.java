@@ -29,7 +29,7 @@ public class ItemServiceImpl implements ItemService {
     public ItemResponse add(ItemRequest request, MultipartFile file) {
         String imgUrl = fileUploadService.uploadFile(file);
 
-
+        // Cuci input
         String cleanName = sanitizer.cleanTextOnly(request.getName());
         String cleanDesc = sanitizer.cleanTextOnly(request.getDescription());
 
@@ -42,6 +42,8 @@ public class ItemServiceImpl implements ItemService {
                 .description(cleanDesc)
                 .category(existingCategory)
                 .imgUrl(imgUrl)
+                // --- SET STOK DARI REQUEST KE ENTITY ---
+                .stock(request.getStock())
                 .build();
 
         ItemEntity savedItem = itemRepository.save(newItem);

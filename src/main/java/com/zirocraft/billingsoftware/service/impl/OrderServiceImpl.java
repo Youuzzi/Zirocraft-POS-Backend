@@ -28,40 +28,52 @@ public class OrderServiceImpl {
             throw new RuntimeException("AKSES ILEGAL: Sesi tidak valid!");
         }
 
-        // 2. Anti-Hack: Ambil harga asli dari DB
+        // 2. Anti-Hack: Ambil data produk asli dari DB buat validasi harga & stok
         Map<String, ItemEntity> dbItems = itemRepository.findAll().stream()
                 .collect(Collectors.toMap(ItemEntity::getName, Function.identity()));
 
         BigDecimal totalServer = BigDecimal.ZERO;
         List<OrderItemEntity> orderItems = new ArrayList<>();
 
+        // 3. Build Order Master
         OrderEntity order = OrderEntity.builder()
+                .customerName(request.getCustomerName())
                 .orderNumber("ZIRO-" + System.currentTimeMillis())
                 .tableNumber(request.getTableNumber())
                 .paymentType(request.getPaymentType())
-                .userId(email).shiftId(shiftId).status("PENDING").build();
+                .userId(email)
+                .shiftId(shiftId)
+                .status("PENDING")
+                .build();
 
         for (OrderRequest.CartItem item : request.getItems()) {
             ItemEntity dbItem = dbItems.get(item.getName());
-            if (dbItem == null) throw new RuntimeException("Barang " + item.getName() + " ilegal!");
+            if (dbItem == null) throw new RuntimeException("Barang " + item.getName() + " tidak valid!");
 
-            // Cek Stok
-            if (dbItem.getStock() < item.getQty()) throw new RuntimeException("Stok " + item.getName() + " habis!");
-
-            // Potong Stok
+            // Cek & Potong Stok
+            if (dbItem.getStock() < item.getQty()) {
+                throw new RuntimeException("Stok " + dbItem.getName() + " tidak cukup!");
+            }
             dbItem.setStock(dbItem.getStock() - item.getQty());
             itemRepository.save(dbItem);
 
-            BigDecimal sub = dbItem.getPrice().multiply(new BigDecimal(item.getQty()));
-            totalServer = totalServer.add(sub);
-            orderItems.add(OrderItemEntity.builder().itemName(dbItem.getName()).price(dbItem.getPrice())
-                    .quantity(item.getQty()).subTotal(sub).order(order).build());
+            // Hitung Subtotal berdasarkan harga asli DB (Bukan harga kiriman frontend)
+            BigDecimal subTotal = dbItem.getPrice().multiply(new BigDecimal(item.getQty()));
+            totalServer = totalServer.add(subTotal);
+
+            orderItems.add(OrderItemEntity.builder()
+                    .itemName(dbItem.getName())
+                    .price(dbItem.getPrice())
+                    .quantity(item.getQty())
+                    .subTotal(subTotal)
+                    .order(order)
+                    .build());
         }
 
         order.setTotalAmount(totalServer);
         order.setItems(orderItems);
 
-        // Update Saldo Shift
+        // 4. Update Saldo Shift
         BigDecimal currentSales = shift.getTotalSales() != null ? shift.getTotalSales() : BigDecimal.ZERO;
         shift.setTotalSales(currentSales.add(totalServer));
         shiftRepository.save(shift);

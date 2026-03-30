@@ -6,6 +6,7 @@ import java.util.List;
 
 @Data
 public class OrderRequest {
+    private String customerName;
     private String tableNumber;
     private BigDecimal totalAmount;
     private String paymentType;

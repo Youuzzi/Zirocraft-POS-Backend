@@ -15,6 +15,9 @@ public class OrderEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(nullable = false)
+    private String customerName;
+
     @Column(unique = true, nullable = false)
     private String orderNumber;
 
@@ -24,7 +27,6 @@ public class OrderEntity {
     private String userId;
     private Long shiftId;
 
-    // STATUS: PENDING, PREPARING, READY, COMPLETED
     @Column(nullable = false)
     private String status;
 

@@ -13,8 +13,9 @@ import java.math.BigDecimal;
 @Builder
 public class ItemRequest {
 
-    private  String name;
-    private  BigDecimal price;
-    private  String categoryId;
-    private  String description;
+    private String name;
+    private BigDecimal price;
+    private String categoryId;
+    private String description;
+    private Integer stock;
 }
