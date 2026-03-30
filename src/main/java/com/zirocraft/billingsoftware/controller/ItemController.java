@@ -17,13 +17,15 @@ public class ItemController {
 
     private final ItemService itemService;
 
-    // JALUR UMUM: /api/v1.0/items (Admin & Kasir bisa akses lewat SecurityConfig)
+    // 1. AMBIL SEMUA MENU (Bisa diakses Admin & Kasir)
+    // URL: /api/v1.0/items
     @GetMapping("/items")
     public ResponseEntity<List<ItemResponse>> getAllItems() {
         return ResponseEntity.ok(itemService.fetchItems());
     }
 
-    // JALUR ADMIN: /api/v1.0/admin/items (Hanya Admin)
+    // 2. TAMBAH MENU BARU (Hanya Admin)
+    // URL: /api/v1.0/admin/items
     @PostMapping("/admin/items")
     public ResponseEntity<ItemResponse> addItem(
             @RequestPart("item") String itemString,
@@ -34,6 +36,23 @@ public class ItemController {
         return new ResponseEntity<>(itemService.add(request, file), HttpStatus.CREATED);
     }
 
+    // 3. UPDATE / RESTOK MENU (Hanya Admin)
+    // URL: /api/v1.0/admin/items/{itemId}
+    @PutMapping("/admin/items/{itemId}")
+    public ResponseEntity<ItemResponse> updateItem(
+            @PathVariable String itemId,
+            @RequestPart("item") String itemString,
+            @RequestPart(value = "file", required = false) MultipartFile file) throws Exception {
+
+        ObjectMapper mapper = new ObjectMapper();
+        ItemRequest request = mapper.readValue(itemString, ItemRequest.class);
+
+        // Memanggil logika update di service
+        return ResponseEntity.ok(itemService.update(itemId, request, file));
+    }
+
+    // 4. HAPUS MENU (Hanya Admin)
+    // URL: /api/v1.0/admin/items/{itemId}
     @DeleteMapping("/admin/items/{itemId}")
     public ResponseEntity<Void> deleteItem(@PathVariable String itemId) {
         itemService.deleteItem(itemId);

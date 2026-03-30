@@ -11,6 +11,7 @@ public interface ItemService {
 
 
     ItemResponse add(ItemRequest request, MultipartFile file);
+    ItemResponse update(String itemId, ItemRequest request, MultipartFile file);
 
     List<ItemResponse> fetchItems();
 
