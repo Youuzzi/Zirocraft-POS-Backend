@@ -8,7 +8,7 @@ import java.sql.Timestamp;
 
 public interface OrderRepository extends JpaRepository<OrderEntity, Long> {
 
-    // Mencari nomor antrean tertinggi hari ini
+    // LOGIKA SAKTI: Cari nomor antrean PALING TINGGI khusus hari ini
     @Query("SELECT MAX(o.queueNumber) FROM OrderEntity o WHERE o.createdAt BETWEEN :start AND :end")
     Integer findMaxQueueNumberToday(@Param("start") Timestamp start, @Param("end") Timestamp end);
 }
