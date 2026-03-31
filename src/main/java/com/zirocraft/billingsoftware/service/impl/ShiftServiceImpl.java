@@ -46,9 +46,13 @@ public class ShiftServiceImpl {
     @Transactional
     public ExpenseEntity addExpense(Long shiftId, String description, BigDecimal amount, String userId) {
         ShiftEntity shift = shiftRepository.findById(shiftId)
-                .orElseThrow(() -> new RuntimeException("Error: Sesi Shift tidak aktif!"));
+                .orElseThrow(() -> new RuntimeException("Error: Sesi Shift tidak ditemukan!"));
 
-        // 1. Catat ke tabel detail pengeluaran
+        // --- PROTEKSI BARU: CEK STATUS SHIFT ---
+        if (!"OPEN".equals(shift.getStatus())) {
+            throw new RuntimeException("AKSES DITOLAK: Tidak bisa mencatat pengeluaran pada shift yang sudah ditutup!");
+        }
+
         ExpenseEntity expense = ExpenseEntity.builder()
                 .shiftId(shiftId)
                 .description(description)
@@ -58,7 +62,6 @@ public class ShiftServiceImpl {
 
         expenseRepository.save(expense);
 
-        // 2. Akumulasi total pengeluaran ke dalam tabel shift
         BigDecimal currentExpenses = shift.getTotalExpenses() != null ? shift.getTotalExpenses() : BigDecimal.ZERO;
         shift.setTotalExpenses(currentExpenses.add(amount));
 

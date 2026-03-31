@@ -4,8 +4,12 @@ import com.zirocraft.billingsoftware.entity.ExpenseEntity;
 import com.zirocraft.billingsoftware.entity.ShiftEntity;
 import com.zirocraft.billingsoftware.service.impl.ShiftServiceImpl;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
+
 import java.math.BigDecimal;
+import java.security.Principal;
 import java.util.Map;
 
 @RestController
@@ -16,7 +20,11 @@ public class ShiftController {
     private final ShiftServiceImpl shiftService;
 
     @GetMapping("/current/{userId}")
-    public ShiftEntity getCurrent(@PathVariable String userId) {
+    public ShiftEntity getCurrent(@PathVariable String userId, Principal principal) {
+        // PROTEKSI: Cek apakah userId di URL sama dengan email yang login di JWT
+        if (!userId.equals(principal.getName())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Dilarang mengintip data shift user lain!");
+        }
         return shiftService.getCurrentShift(userId).orElse(null);
     }
 
