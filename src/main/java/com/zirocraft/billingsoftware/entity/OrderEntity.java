@@ -15,14 +15,19 @@ public class OrderEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
     private String customerName;
 
     @Column(unique = true, nullable = false)
     private String orderNumber;
 
     private String tableNumber;
+
+    // --- FINANCIAL BREAKDOWN (WAJIB ADA BIAR SINKRON SAMA DB) ---
+    private BigDecimal subTotal;
+    private BigDecimal serviceCharge;
+    private BigDecimal taxAmount;
     private BigDecimal totalAmount;
+
     private String paymentType;
     private String userId;
     private Long shiftId;
@@ -31,6 +36,9 @@ public class OrderEntity {
     private String status;
 
     private Integer queueNumber;
+
+    private String voidReason;
+    private String voidBy;
 
     @CreationTimestamp
     @Column(updatable = false)

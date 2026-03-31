@@ -6,19 +6,14 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
 import org.hibernate.annotations.UpdateTimestamp;
-
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.util.UUID;
 
 @Entity
 @Table(name = "tbl_items")
-@Data
-@AllArgsConstructor
-@NoArgsConstructor
-@Builder
+@Data @AllArgsConstructor @NoArgsConstructor @Builder
 public class ItemEntity {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -27,14 +22,14 @@ public class ItemEntity {
     private String itemId;
 
     private String name;
-
     private BigDecimal price;
-
     private String description;
 
-    // --- TAMBAHAN: FIELD STOK ---
     @Column(nullable = false)
     private Integer stock;
+
+    @Version
+    private Long version = 0L;
 
     @CreationTimestamp
     @Column(updatable = false)
@@ -52,12 +47,7 @@ public class ItemEntity {
 
     @PrePersist
     public void onCreate() {
-        if (this.itemId == null) {
-            this.itemId = UUID.randomUUID().toString();
-        }
-        // Default stok jadi 0 kalau tidak diinput
-        if (this.stock == null) {
-            this.stock = 0;
-        }
+        if (this.itemId == null) this.itemId = UUID.randomUUID().toString();
+        if (this.stock == null) this.stock = 0;
     }
 }
