@@ -6,9 +6,12 @@ import com.zirocraft.billingsoftware.repository.ExpenseRepository;
 import com.zirocraft.billingsoftware.repository.ShiftRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
+
 import java.math.BigDecimal;
 import java.sql.Timestamp;
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -18,79 +21,74 @@ public class ShiftServiceImpl {
     private final ShiftRepository shiftRepository;
     private final ExpenseRepository expenseRepository;
 
-    // Menarik data shift yang masih status OPEN untuk user tertentu
     public Optional<ShiftEntity> getCurrentShift(String userId) {
-        return shiftRepository.findByUserIdAndStatus(userId, "OPEN");
+        List<ShiftEntity> shifts = shiftRepository.findAll().stream()
+                .filter(s -> s.getUserId().equals(userId) && "OPEN".equals(s.getStatus()))
+                .sorted((a, b) -> b.getId().compareTo(a.getId()))
+                .toList();
+        return shifts.isEmpty() ? Optional.empty() : Optional.of(shifts.get(0));
     }
 
-    // Membuka Shift Baru
-    @Transactional
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public ShiftEntity openShift(String userId, BigDecimal openingBalance) {
-        // Cek dulu, kalau ada yang masih OPEN, jangan buat baru, return yang lama saja
-        Optional<ShiftEntity> existing = getCurrentShift(userId);
-        if (existing.isPresent()) return existing.get();
+        // SOP: Tutup paksa shift lama yang menggantung & hitung saldonya (Agar tidak NULL)
+        List<ShiftEntity> activeShifts = shiftRepository.findAll().stream()
+                .filter(s -> s.getUserId().equals(userId) && "OPEN".equals(s.getStatus()))
+                .toList();
 
-        // Buat Sesi Shift Baru dengan angka awal yang bersih
+        for(ShiftEntity s : activeShifts) {
+            BigDecimal sales = s.getTotalSales() != null ? s.getTotalSales() : BigDecimal.ZERO;
+            BigDecimal exp = s.getTotalExpenses() != null ? s.getTotalExpenses() : BigDecimal.ZERO;
+            BigDecimal expected = s.getOpeningBalance().add(sales).subtract(exp);
+
+            s.setStatus("CLOSED");
+            s.setEndTime(new Timestamp(System.currentTimeMillis()));
+            s.setExpectedBalance(expected);
+            s.setActualBalance(BigDecimal.ZERO); // Kasir dianggap setor 0 jika kabur/lupa tutup
+            s.setVariance(expected.negate());    // Selisih jadi minus sebesar uang yang seharusnya ada
+            shiftRepository.save(s);
+        }
+
         ShiftEntity newShift = ShiftEntity.builder()
-                .userId(userId)
-                .openingBalance(openingBalance)
-                .totalSales(BigDecimal.ZERO)    // Paksa Nol di awal
-                .totalExpenses(BigDecimal.ZERO) // Paksa Nol di awal
-                .status("OPEN")
-                .build();
-
+                .userId(userId).openingBalance(openingBalance)
+                .totalSales(BigDecimal.ZERO).totalExpenses(BigDecimal.ZERO).status("OPEN").build();
         return shiftRepository.save(newShift);
     }
 
-    // Mencatat Pengeluaran (Petty Cash)
-    @Transactional
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public ExpenseEntity addExpense(Long shiftId, String description, BigDecimal amount, String userId) {
-        ShiftEntity shift = shiftRepository.findById(shiftId)
-                .orElseThrow(() -> new RuntimeException("Error: Sesi Shift tidak ditemukan!"));
+        ShiftEntity shift = shiftRepository.findById(shiftId).orElseThrow(() -> new RuntimeException("Shift not found"));
+        if (!"OPEN".equals(shift.getStatus())) throw new RuntimeException("Shift closed");
 
-        // --- PROTEKSI BARU: CEK STATUS SHIFT ---
-        if (!"OPEN".equals(shift.getStatus())) {
-            throw new RuntimeException("AKSES DITOLAK: Tidak bisa mencatat pengeluaran pada shift yang sudah ditutup!");
-        }
-
-        ExpenseEntity expense = ExpenseEntity.builder()
-                .shiftId(shiftId)
-                .description(description)
-                .amount(amount)
-                .userId(userId)
-                .build();
-
+        ExpenseEntity expense = ExpenseEntity.builder().shiftId(shiftId).description(description).amount(amount).userId(userId).build();
         expenseRepository.save(expense);
 
-        BigDecimal currentExpenses = shift.getTotalExpenses() != null ? shift.getTotalExpenses() : BigDecimal.ZERO;
-        shift.setTotalExpenses(currentExpenses.add(amount));
-
+        BigDecimal currentExp = shift.getTotalExpenses() != null ? shift.getTotalExpenses() : BigDecimal.ZERO;
+        shift.setTotalExpenses(currentExp.add(amount));
         shiftRepository.save(shift);
         return expense;
     }
 
-    // Menutup Shift (Closing Shift)
-    @Transactional
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public ShiftEntity closeShift(Long shiftId, BigDecimal actualPhysicalCash) {
-        ShiftEntity shift = shiftRepository.findById(shiftId)
-                .orElseThrow(() -> new RuntimeException("Error: Shift tidak ditemukan!"));
+        ShiftEntity shift = shiftRepository.findById(shiftId).orElseThrow(() -> new RuntimeException("Not found"));
+        BigDecimal sales = shift.getTotalSales() != null ? shift.getTotalSales() : BigDecimal.ZERO;
+        BigDecimal exp = shift.getTotalExpenses() != null ? shift.getTotalExpenses() : BigDecimal.ZERO;
 
-        // LOGIKA REKONSILIASI KAS (Anti-Korupsi):
-        // Uang seharusnya ada = Modal Awal + Penjualan - Pengeluaran
-        BigDecimal expected = shift.getOpeningBalance()
-                .add(shift.getTotalSales())
-                .subtract(shift.getTotalExpenses());
-
+        BigDecimal expected = shift.getOpeningBalance().add(sales).subtract(exp);
         shift.setExpectedBalance(expected);
         shift.setActualBalance(actualPhysicalCash);
-
-        // Variance = Uang yang dilaporkan kasir - Uang hitungan sistem
-        // Jika minus = Kasir Nombok. Jika plus = Ada uang lebih (tips/salah kembalian)
         shift.setVariance(actualPhysicalCash.subtract(expected));
-
         shift.setEndTime(new Timestamp(System.currentTimeMillis()));
         shift.setStatus("CLOSED");
-
         return shiftRepository.save(shift);
+    }
+
+    public List<ShiftEntity> getClosedShifts() {
+        return shiftRepository.findByStatusOrderByEndTimeDesc("CLOSED");
+    }
+
+    public List<ExpenseEntity> getAllExpenses() {
+        return expenseRepository.findAll();
     }
 }

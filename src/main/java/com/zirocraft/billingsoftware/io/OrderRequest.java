@@ -1,5 +1,4 @@
 package com.zirocraft.billingsoftware.io;
-
 import lombok.Data;
 import java.math.BigDecimal;
 import java.util.List;
@@ -10,6 +9,7 @@ public class OrderRequest {
     private String tableNumber;
     private BigDecimal totalAmount;
     private String paymentType;
+    private String idempotencyKey;
     private List<CartItem> items;
 
     @Data

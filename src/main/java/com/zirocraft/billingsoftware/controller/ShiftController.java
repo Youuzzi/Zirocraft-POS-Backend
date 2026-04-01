@@ -5,11 +5,13 @@ import com.zirocraft.billingsoftware.entity.ShiftEntity;
 import com.zirocraft.billingsoftware.service.impl.ShiftServiceImpl;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.security.Principal;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -21,9 +23,8 @@ public class ShiftController {
 
     @GetMapping("/current/{userId}")
     public ShiftEntity getCurrent(@PathVariable String userId, Principal principal) {
-        // PROTEKSI: Cek apakah userId di URL sama dengan email yang login di JWT
         if (!userId.equals(principal.getName())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Dilarang mengintip data shift user lain!");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Forbidden");
         }
         return shiftService.getCurrentShift(userId).orElse(null);
     }
@@ -50,5 +51,18 @@ public class ShiftController {
         Long shiftId = Long.valueOf(payload.get("shiftId").toString());
         BigDecimal actualCash = new BigDecimal(payload.get("actualBalance").toString());
         return shiftService.closeShift(shiftId, actualCash);
+    }
+
+    @GetMapping("/history")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    public List<ShiftEntity> getShiftHistory() {
+        return shiftService.getClosedShifts();
+    }
+
+    // --- LOGIC BARU: AMBIL SEMUA PENGELUARAN (KHUSUS ADMIN) ---
+    @GetMapping("/expenses/all")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    public List<ExpenseEntity> getAllExpenses() {
+        return shiftService.getAllExpenses();
     }
 }

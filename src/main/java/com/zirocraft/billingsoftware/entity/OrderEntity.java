@@ -22,7 +22,7 @@ public class OrderEntity {
 
     private String tableNumber;
 
-    // --- FINANCIAL BREAKDOWN (WAJIB ADA BIAR SINKRON SAMA DB) ---
+    // --- FINANCIAL BREAKDOWN ---
     private BigDecimal subTotal;
     private BigDecimal serviceCharge;
     private BigDecimal taxAmount;
@@ -36,6 +36,10 @@ public class OrderEntity {
     private String status;
 
     private Integer queueNumber;
+
+    // --- LOGIC MASTER AUDIT: Idempotency Key (Anti Double-Submit) ---
+    @Column(unique = true)
+    private String idempotencyKey;
 
     private String voidReason;
     private String voidBy;

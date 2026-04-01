@@ -10,6 +10,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -27,6 +28,7 @@ import java.util.List;
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
 
@@ -49,13 +51,16 @@ public class SecurityConfig {
                         // 1. PUBLIC
                         .requestMatchers("/login", "/encode", "/uploads/**").permitAll()
 
-                        // 2. SHARED ACCESS (ADMIN & USER) - Wajib Authority sesuai isi DB lo
-                        .requestMatchers("/shifts/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_USER")
+                        // 2. SHARED ACCESS (Urutan diperbaiki agar ROLE_USER tidak mental)
+                        .requestMatchers("/shifts/current/**", "/shifts/open", "/shifts/expense", "/shifts/close").hasAnyAuthority("ROLE_ADMIN", "ROLE_USER")
                         .requestMatchers(HttpMethod.GET, "/categories/**", "/items/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_USER")
-                        .requestMatchers(HttpMethod.GET, "/admin/settings/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_USER")
+                        .requestMatchers(HttpMethod.GET, "/orders/recent", "/orders/search").hasAnyAuthority("ROLE_ADMIN", "ROLE_USER")
                         .requestMatchers(HttpMethod.POST, "/orders/create").hasAnyAuthority("ROLE_ADMIN", "ROLE_USER")
+                        .requestMatchers(HttpMethod.GET, "/admin/settings/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_USER")
 
-                        // 3. ADMIN ONLY (WRITE/DELETE)
+                        // 3. STRICT ADMIN ONLY
+                        .requestMatchers("/shifts/history", "/shifts/expenses/all").hasAuthority("ROLE_ADMIN")
+                        .requestMatchers("/orders/summary", "/orders/void/**").hasAuthority("ROLE_ADMIN")
                         .requestMatchers("/admin/**").hasAuthority("ROLE_ADMIN")
 
                         .anyRequest().authenticated())
