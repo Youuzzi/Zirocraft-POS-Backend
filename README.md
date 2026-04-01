@@ -23,7 +23,7 @@ Repository ini berisi logika bisnis, manajemen database, dan sistem keamanan tra
 ### 🚀 Cara Menjalankan Project
 1. **Clone** repository ini:
    ```bash
-   git clone [https://github.com/Youuzzi/Zirocraft-POS-Backend.git](https://github.com/Youuzzi/Zirocraft-POS-Backend.git)
+   git clone [https://github.com/Youuzzi/Zirocraft-POS-Backend.git]
 Database: Buat database baru di MySQL Workbench (contoh: billing_app).
 
 Migration: Execute perintah SQL ini di MySQL agar fitur keamanan transaksi aktif:
