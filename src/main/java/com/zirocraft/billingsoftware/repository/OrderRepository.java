@@ -8,13 +8,16 @@ import java.sql.Timestamp;
 import java.util.List;
 
 public interface OrderRepository extends JpaRepository<OrderEntity, Long> {
+
     @Query("SELECT MAX(o.queueNumber) FROM OrderEntity o WHERE o.createdAt BETWEEN :start AND :end")
     Integer findMaxQueueNumberToday(@Param("start") Timestamp start, @Param("end") Timestamp end);
 
-    List<OrderEntity> findTop5ByShiftIdOrderByIdDesc(Long shiftId);
     List<OrderEntity> findByCreatedAtBetweenOrderByIdDesc(Timestamp start, Timestamp end);
+
+    // --- TAMBAHKAN INI UNTUK PENCARIAN ---
     List<OrderEntity> findByOrderNumberContainingIgnoreCaseOrCustomerNameContainingIgnoreCaseOrderByIdDesc(String orderNum, String custName);
 
-    // --- LOGIC MASTER AUDIT: Cek Idempotency Key ---
+    List<OrderEntity> findByShiftIdOrderByIdDesc(Long shiftId);
+
     boolean existsByIdempotencyKey(String idempotencyKey);
 }
