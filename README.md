@@ -56,5 +56,7 @@ Sesuaikan kredensial database di file src/main/resources/application.properties.
 4. Run Application
 Bash
 ./mvnw spring-boot:run
-✍️ Author
-Developed by Yozi Heru Maulana | Zirocraft Studio 🚀
+
+---
+### ✍️ Author
+**Developed by Yozi Heru Maulana | Zirocraft Studio 🚀**
