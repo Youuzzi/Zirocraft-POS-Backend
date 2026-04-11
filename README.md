@@ -1,62 +1,117 @@
-# Zirocraft POS - Backend API ☕🛡️
+# ZiroShop POS – Backend API ☕🛡️
 
-Repository ini berisi logika bisnis, manajemen database, dan sistem keamanan transaksi untuk **Zirocraft POS**. Dibangun menggunakan framework Spring Boot dengan standar industri untuk integritas data finansial dan penanganan transaksi tinggi.
-
-### 🔗 Related Repository
-* **Frontend Interface:** [Zirocraft-POS-Frontend](https://github.com/Youuzzi/Zirocraft-POS-Frontend)
+> REST API untuk sistem kasir ZiroShop. Mengelola logika bisnis, manajemen database, shift kasir, dan keamanan transaksi. Dibangun menggunakan Spring Boot dengan standar industri.
 
 ---
 
-### 🛠️ Tech Stack
-* **Java 21 (LTS) & Spring Boot 3.5.x**
-* **Spring Security** (Stateless JWT Authentication)
-* **Spring Data JPA** (Hibernate)
-* **MySQL (Production Database) & H2 (Testing Database)**
-* **Maven** (Dependency Manager)
+## 🔗 Related Repository
+- **Frontend:** [Zirocraft-POS-Frontend](https://github.com/Youuzzi/Zirocraft-POS-Frontend)
 
 ---
 
-### ✨ Fitur Utama (Industrial Grade)
-* **High Concurrency Control:** Implementasi *Pessimistic Write Locking* untuk mencegah kebocoran stok saat transaksi tinggi secara bersamaan.
-* **Anti-Double Billing:** Sistem *Idempotency Key* (UUID) untuk menjamin satu transaksi hanya diproses satu kali, mencegah duplikasi data akibat gangguan jaringan.
-* **Financial Integrity:** Logika pembulatan otomatis ke kelipatan 500 terdekat menggunakan `BigDecimal` yang presisi.
-* **Strict Shift Management:** Sistem rekonsiliasi kasir (*Blind Closing*) untuk audit keuangan yang akurat.
-* **XSS Protection:** Pembersihan input kategori dan produk menggunakan *OWASP HTML Sanitizer*.
-* **Global Exception Handling:** Standarisasi respon error API dalam format JSON yang rapi.
+## 🛠️ Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Language | Java 21 (LTS) |
+| Framework | Spring Boot 3.x |
+| Security | Spring Security + JWT |
+| ORM | Spring Data JPA (Hibernate) |
+| Database | MySQL |
+| Build Tool | Maven |
+| API | RESTful API |
 
 ---
 
-### 🧪 Automated Testing & Quality Audit
-Proyek ini mengimplementasikan strategi pengujian otomatis untuk menjaga stabilitas sistem tanpa konfigurasi manual yang rumit:
-* **Isolated Integration Test:** Menggunakan **H2 In-Memory Database** (MySQL Compatibility Mode). Pengujian logika database berjalan di RAM, sehingga tidak mengotori database produksi.
-* **Zero Configuration Testing:** Cukup jalankan perintah test, sistem akan mengonfigurasi environment secara otomatis melalui Spring Profiles (`test`).
+## ✨ Fitur Utama
+
+### 🔐 Authentication & Authorization
+- **JWT Authentication** — Stateless token-based authentication
+- **Role-Based Access Control** — Role `ADMIN` dan `USER` dengan akses endpoint berbeda
+- **User Management** — CRUD user dikelola oleh Admin
+
+### 🧾 Shift Management
+- **Open Shift** — Buka shift dengan input modal awal (uang di laci)
+- **Expense Tracking** — Catat pengeluaran operasional selama shift (beli es batu, bahan, dll.)
+- **Close Shift** — Tutup shift dengan rekonsiliasi uang aktual vs expected
+- **Shift History** — Riwayat seluruh shift tersedia untuk Admin
+- **Auto Cleanup** — Scheduled task untuk membersihkan shift yang tidak terselesaikan
+
+### 🛒 Transaksi & Order
+- **Checkout** — Proses transaksi terintegrasi dengan shift aktif
+- **Idempotency Key** — Mencegah duplikasi order akibat gangguan jaringan atau double submit
+- **Nomor Antrian Otomatis** — Setiap order mendapat nomor antrian harian yang di-generate otomatis
+- **Validasi Stok Real-time** — Stok dicek dan dikurangi otomatis saat checkout
+- **Void Order** — Admin dapat membatalkan order dengan alasan void, tercatat siapa yang melakukan void
+- **Search Order** — Pencarian order berdasarkan query
+- **Recent Orders** — Endpoint untuk mengambil order terbaru per shift
+
+### 📦 Manajemen Produk & Kategori
+- CRUD Item — Tambah, edit, hapus produk dengan upload foto
+- CRUD Kategori — Kelola kategori produk
+- **Smart Stock Alert** — Stok < 5 unit ditandai sebagai "running low"
+- **Restock via Edit** — Update stok produk melalui fitur edit item
+
+### ⚙️ Store Settings
+- **Nama Toko** — Konfigurasi nama toko yang tampil di struk
+- **Modal Laci** — Atur jumlah uang awal di laci kasir
+
+### 🛡️ Security & Reliability
+- **Pessimistic Write Locking** — Mencegah race condition stok saat transaksi bersamaan
+- **Global Exception Handler** — Standarisasi format error response dalam JSON
+- **XSS-safe Input** — Validasi input di level request
 
 ---
 
-### 🚀 Cara Menjalankan Project
+## 📁 Struktur Project
 
-#### 1. Clone Repository
+```
+src/main/java/
+├── config/          # Security, Web config
+├── controller/      # Auth, Category, Item, Order, Setting, Shift, User
+├── entity/          # JPA Entities
+├── filter/          # JWT Request Filter
+├── repository/      # Spring Data JPA Repositories
+├── request/         # Request DTOs
+├── response/        # Response DTOs
+├── service/         # Business Logic (Interface + Impl)
+├── task/            # Scheduled Tasks (ShiftCleanup)
+└── util/            # JWT Utility
+```
+
+---
+
+## 🚀 Cara Menjalankan
+
+### Prerequisites
+- Java 21
+- MySQL 8.x
+- Maven
+
+### Setup
+
 ```bash
+# Clone repository
 git clone https://github.com/Youuzzi/Zirocraft-POS-Backend.git
 cd Zirocraft-POS-Backend
-2. Verify & Audit (Recommended)
-Jalankan pengujian otomatis untuk memastikan semua logika bisnis dan skema database berjalan sempurna:
 
-Bash
-./mvnw test
-3. Database Configuration
-Buat database MySQL: billing_app.
+# Buat database MySQL
+CREATE DATABASE zirocraft_pos;
 
-Jalankan SQL Migration jika diperlukan:
+# Konfigurasi application.properties
+spring.datasource.url=jdbc:mysql://localhost:3306/zirocraft_pos
+spring.datasource.username=your_username
+spring.datasource.password=your_password
+spring.jpa.hibernate.ddl-auto=update
 
-SQL
-ALTER TABLE tbl_orders ADD COLUMN idempotency_key VARCHAR(255) UNIQUE;
-Sesuaikan kredensial database di file src/main/resources/application.properties.
-
-4. Run Application
-Bash
-./mvnw spring-boot:run
+# Jalankan
+mvn spring-boot:run
 ```
+
 ---
-✍️ Author
-**Developed by Yozi Heru Maulana | Zirocraft Studio 🚀**
+
+## 👨‍💻 Developer
+
+**Yozi Heru Maulana** — [github.com/Youuzzi](https://github.com/Youuzzi)
+
+*Zirocraft Studio*
